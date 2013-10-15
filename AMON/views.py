@@ -95,23 +95,6 @@ class Entities(Resource):
             db.session.commit()
             return make_response('', 204)
 
-    def delete(self, entity_id):
-        """
-        Removes an entity from the database.
-
-        :param entity_id: The UUID of the entity being deleted
-        :return: 200 - The entity was deleted successfully
-                 404 - The entity was not found
-        """
-        the_entity = Entity.query.filter(Entity.uuid == entity_id).first()
-
-        if the_entity is None:
-            abort(404, message='Unknown entityId')
-
-        db.session.delete(the_entity)
-        db.session.commit()
-        return make_response('', 200)
-
 
 class MeteringPoints(Resource):
     def get(self, metering_point_id=None):
@@ -204,23 +187,6 @@ class MeteringPoints(Resource):
 
             db.session.commit()
             return make_response('', 200)
-
-    def delete(self, metering_point_id):
-        """
-        Removes an entity from the database.
-
-        :param metering_point_id: The UUID of the metering point being deleted
-        :return: 200 - The metering point was deleted successfully
-                 404 - The metering point was not found
-        """
-        the_metering_point = MeteringPoint.query.filter(MeteringPoint.uuid == metering_point_id).first()
-
-        if the_metering_point is None:
-            abort(404, message='Unknown meteringPointId')
-
-        db.session.delete(the_metering_point)
-        db.session.commit()
-        return make_response('', 200)
 
 
 api.add_resource(Entities, '/entities/<entity_id>', '/entities', endpoint='entities')
