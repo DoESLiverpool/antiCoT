@@ -50,8 +50,122 @@ class MeteringPoint(db.Model):
               'description': fields.String}
 
     def __init__(self, UUID, entity_id, description=None):
-        self.uuid = UUID.lower()
-        self.entity_id = entity_id.lower()
+        if uuid_pattern.match(UUID) is None:
+            raise ArgumentError
+        else:
+            self.uuid = UUID.lower()
+
+        if uuid_pattern.match(entity_id) is None:
+            raise ArgumentError
+        else:
+            self.entity_id = entity_id.lower()
+
+        self.description = description
+
+    def __repr__(self):
+        return self.uuid
+
+
+class Reading(db.Model):
+    __tablename__ = 'readings'
+
+    _id = db.Column(db.Integer(), unique=True, autoincrement=True, primary_key=True)
+    reading_type = db.Column(db.Text(), nullable=False)
+    unit = db.Column(db.Text(), nullable=True)
+    resolution = db.Column(db.Float(), nullable=True)
+    accuracy = db.Column(db.Float(), nullable=True)
+    period = db.Column(db.Enum('instant', 'cumulative', 'pulse'), nullable=False)
+    value_min = db.Column(db.Float(), nullable=True)
+    value_max = db.Column(db.Float(), nullable=True)
+    correction = db.Column(db.Boolean(), nullable=True)
+    corrected_unit = db.Column(db.Text(), nullable=True)
+    correction_factor = db.Column(db.Float(), nullable=True)
+    correction_factor_breakdown = db.Column(db.Text(), nullable=True)
+
+    fields = {'type': fields.String(attribute='reading_type'),
+              'unit': fields.String,
+              'resolution': fields.Float,
+              'accuracy': fields.Float,
+              'period': fields.String,
+              'min': fields.Float(attribute='value_min'),
+              'max': fields.Float(attribute='value_max'),
+              'correction': fields.Boolean,
+              'correctedUnit': fields.String(attribute='corrected_unit'),
+              'correctionFactor': fields.Float(attribute='correction_factor'),
+              'correctionFactorBreakdown': fields.String(attribute='correction_factor_breakdown')
+    }
+
+    def __init__(self, reading_type, period):
+        self.reading_type = reading_type
+        self.period = period.lower()
+
+    def __repr__(self):
+        return '{0} ({1})'.format(self.reading_type, self.unit)
+
+
+class Measurement(db.Model):
+    __tablename__ = 'measurements'
+
+    _id = db.Column(db.Integer(), unique=True, autoincrement=True, primary_key=True)
+    reading_type = db.Column(db.Text(), nullable=False)
+    timestamp = db.Column(db.DateTime(), nullable=False)
+    value = db.Column(db.Float(), nullable=False)
+    error = db.Column(db.Text(), nullable=True)
+    aggregated = db.Column(db.Boolean(), nullable=True)
+
+    fields = {'type': fields.String(attribute='reading_type'),
+              'timestamp': fields.DateTime,
+              'value': fields.Float,
+              'error': fields.String,
+              'aggregated': fields.Boolean
+    }
+
+    def __init__(self, reading_type, timestamp, value, aggregated=False):
+        self.reading_type = reading_type
+        self.timestamp = timestamp
+        self.value = value
+        self.aggregated = aggregated
+
+    def __repr__(self):
+        return '{0} [{1}] {2}'.format(self.timestamp, self.reading_type, self.value)
+
+
+class Device(db.Model):
+    __tablename__ = 'devices'
+
+    uuid = db.Column(db.String(36), unique=True, primary_key=True)
+    entity_id = db.Column(db.String, db.ForeignKey('metering_points.entity_id'))
+    metering_point_id = db.Column(db.String, db.ForeignKey('metering_points.uuid'))
+    description = db.Column(db.Text(), nullable=True)
+    privacy = db.Column(db.Enum('private', 'public'), nullable=False)
+    measurements = db.relationship('Measurement', backref=db.backref('device'))
+    readings = db.relationship('Reading', backref=db.backref('device'))
+
+    fields = {'deviceId': fields.String(attribute='uuid'),
+              'entityId': fields.String(attribute='entity_id'),
+              'meteringPointId': fields.String(attribute='metering_point_id'),
+              'description': fields.String,
+              'privacy': fields.String
+    }
+
+    def __init__(self, UUID, entity_id, metering_point_id, privacy, description=None):
+        if uuid_pattern.match(UUID) is None:
+            raise ArgumentError
+        else:
+            self.uuid = UUID.lower()
+
+        if uuid_pattern.match(entity_id) is None:
+            raise ArgumentError
+        else:
+            self.entity_id = entity_id.lower()
+
+        if uuid_pattern.match(metering_point_id) is None:
+            raise ArgumentError
+        else:
+            self.metering_point_id = metering_point_id.lower()
+
+        self.privacy = privacy.lower()
+
         self.description = description
 
     def __repr__(self):

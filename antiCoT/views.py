@@ -29,7 +29,9 @@ class Entities(Resource):
 
     def post(self):
         """
-        Adds a new entity to the database. Doesn't support the "?append=true" parameter.
+        Adds a new entity to the database. Doesn't support the "?append=true" parameter. Also doesn't support updating
+        an entity's list of metering points as the documentation implies, this can be achieved by re-parenting the
+        metering points.
 
         :return: 201 - The entity was successfully created
                  400 - The parameters were malformed
