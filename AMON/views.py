@@ -20,7 +20,7 @@ class Entities(Resource):
             response = jsonify({'entities': marshal(entities, Entity.summary_fields)})
         else:
             entities = Entity.query.filter(Entity.uuid == entity_id).all()
-            response = jsonify({'entities': marshal(entities, Entity.fields)})
+            response = jsonify({'entities': marshal(entities, Entity.response_fields)})
 
             if len(entities) == 0:
                 abort(404, message='Entity not found')
@@ -102,7 +102,7 @@ class MeteringPoints(Resource):
             abort(400, message='Metering point id missing')
 
         metering_points = MeteringPoint.query.filter(MeteringPoint.uuid == metering_point_id).all()
-        response = jsonify({'meteringPoints': marshal(metering_points, MeteringPoint.fields)})
+        response = jsonify({'meteringPoints': marshal(metering_points, MeteringPoint.response_fields)})
 
         if len(metering_points) == 0:
             abort(404, message='Metering Point not found')
@@ -139,7 +139,9 @@ class MeteringPoints(Resource):
             db.session.add(metering_point)
             db.session.commit()
 
-            return make_response(('', 201, {'Location': url_for('meteringpoints', metering_point_id=metering_point.uuid, _external=True)}))
+            return make_response(('', 201, {'Location': url_for('meteringpoints',
+                                                                metering_point_id=metering_point.uuid,
+                                                                _external=True)}))
         except ArgumentError:
             abort(400, message='Invalid metering point parameters')
         except IntegrityError:
@@ -174,7 +176,9 @@ class MeteringPoints(Resource):
             try:
                 metering_point = MeteringPoint(metering_point_id, entity_id, description)
                 db.session.add(metering_point)
-                return make_response(('', 201, {'Location': url_for('meteringpoints', metering_point_id=metering_point.uuid, _external=True)}))
+                return make_response(('', 201, {'Location': url_for('meteringpoints',
+                                                                    metering_point_id=metering_point.uuid,
+                                                                    _external=True)}))
             except ArgumentError:
                 abort(400, message='Invalid entity parameters')
 

@@ -12,16 +12,15 @@ class Entity(db.Model):
     __tablename__ = 'entities'
 
     uuid = db.Column(db.String(36), unique=True, primary_key=True)
-    description = db.Column(db.Text(), nullable=True)
-    meteringPointIds = db.relationship('MeteringPoint', cascade='all,delete', backref=db.backref('entity'))
+    description = db.Column(db.Text, nullable=True)
+    meteringPointIds = db.relationship('MeteringPoint', cascade='all', backref=db.backref('entity'))
 
     summary_fields = {'entityId': fields.String(attribute='uuid'),
                       'description': fields.String}
 
-    fields = {'entityId': fields.String(attribute='uuid'),
-              'description': fields.String,
-              'meteringPointIds': fields.List(fields.String),
-    }
+    response_fields = {'entityId': fields.String(attribute='uuid'),
+                       'description': fields.String,
+                       'meteringPointIds': fields.List(fields.String)}
 
     def __init__(self, UUID=None, description=None):
         if UUID is None:
@@ -42,12 +41,23 @@ class MeteringPoint(db.Model):
     __tablename__ = 'metering_points'
 
     uuid = db.Column(db.String(36), unique=True, primary_key=True)
-    description = db.Column(db.Text(), nullable=True)
-    entity_id = db.Column(db.String, db.ForeignKey('entities.uuid'))
+    description = db.Column(db.Text, nullable=True)
+    entity_id = db.Column(db.String(36), db.ForeignKey('entities.uuid'), index=True)
+    devices = db.relationship('Device', cascade='all', backref=db.backref('metering_point'))
 
-    fields = {'meteringPointId': fields.String(attribute='uuid'),
-              'entityId': fields.String(attribute='entity'),
-              'description': fields.String}
+    # If not NULL, represents the location of the device in some 3D coordinate space.
+    # NOTE: Not part of the AMON standard, but can be represented in the "metadata" structure.
+    x = db.Column(db.Float, nullable=True)
+    y = db.Column(db.Float, nullable=True)
+    z = db.Column(db.Float, nullable=True)
+
+    metadata_fields = {'x': fields.Float,
+                       'y': fields.Float,
+                       'z': fields.Float}
+
+    response_fields = {'meteringPointId': fields.String(attribute='uuid'),
+                       'entityId': fields.String(attribute='entity_id'),
+                       'description': fields.String}
 
     def __init__(self, UUID, entity_id, description=None):
         if uuid_pattern.match(UUID) is None:
@@ -82,18 +92,17 @@ class Reading(db.Model):
     correction_factor = db.Column(db.Float(), nullable=True)
     correction_factor_breakdown = db.Column(db.Text(), nullable=True)
 
-    fields = {'type': fields.String(attribute='reading_type'),
-              'unit': fields.String,
-              'resolution': fields.Float,
-              'accuracy': fields.Float,
-              'period': fields.String,
-              'min': fields.Float(attribute='value_min'),
-              'max': fields.Float(attribute='value_max'),
-              'correction': fields.Boolean,
-              'correctedUnit': fields.String(attribute='corrected_unit'),
-              'correctionFactor': fields.Float(attribute='correction_factor'),
-              'correctionFactorBreakdown': fields.String(attribute='correction_factor_breakdown')
-    }
+    response_fields = {'type': fields.String(attribute='reading_type'),
+                       'unit': fields.String,
+                       'resolution': fields.Float,
+                       'accuracy': fields.Float,
+                       'period': fields.String,
+                       'min': fields.Float(attribute='value_min'),
+                       'max': fields.Float(attribute='value_max'),
+                       'correction': fields.Boolean,
+                       'correctedUnit': fields.String(attribute='corrected_unit'),
+                       'correctionFactor': fields.Float(attribute='correction_factor'),
+                       'correctionFactorBreakdown': fields.String(attribute='correction_factor_breakdown')}
 
     def __init__(self, reading_type, period):
         self.reading_type = reading_type
@@ -106,19 +115,19 @@ class Reading(db.Model):
 class Measurement(db.Model):
     __tablename__ = 'measurements'
 
-    _id = db.Column(db.Integer(), unique=True, autoincrement=True, primary_key=True)
-    reading_type = db.Column(db.Text(), nullable=False)
-    timestamp = db.Column(db.DateTime(), nullable=False)
-    value = db.Column(db.Float(), nullable=False)
-    error = db.Column(db.Text(), nullable=True)
-    aggregated = db.Column(db.Boolean(), nullable=True)
+    _id = db.Column(db.Integer, unique=True, autoincrement=True, primary_key=True)
+    reading_type = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, index=True, nullable=False)
+    value = db.Column(db.Float, nullable=False)
+    error = db.Column(db.Text, nullable=True)
+    aggregated = db.Column(db.Boolean, nullable=True)
+    device_id = db.Column(db.String(36), db.ForeignKey('devices.uuid'), index=True)
 
-    fields = {'type': fields.String(attribute='reading_type'),
-              'timestamp': fields.DateTime,
-              'value': fields.Float,
-              'error': fields.String,
-              'aggregated': fields.Boolean
-    }
+    response_fields = {'type': fields.String(attribute='reading_type'),
+                       'timestamp': fields.DateTime,
+                       'value': fields.Float,
+                       'error': fields.String,
+                       'aggregated': fields.Boolean}
 
     def __init__(self, reading_type, timestamp, value, aggregated=False):
         self.reading_type = reading_type
@@ -134,19 +143,28 @@ class Device(db.Model):
     __tablename__ = 'devices'
 
     uuid = db.Column(db.String(36), unique=True, primary_key=True)
-    entity_id = db.Column(db.String, db.ForeignKey('metering_points.entity_id'))
-    metering_point_id = db.Column(db.String, db.ForeignKey('metering_points.uuid'))
-    description = db.Column(db.Text(), nullable=True)
+    entity_id = db.Column(db.String(36), index=True)
+    metering_point_id = db.Column(db.String(36), db.ForeignKey('metering_points.uuid'), index=True)
+    description = db.Column(db.Text, nullable=True)
     privacy = db.Column(db.Enum('private', 'public'), nullable=False)
     measurements = db.relationship('Measurement', backref=db.backref('device'))
     readings = db.relationship('Reading', backref=db.backref('device'))
 
-    fields = {'deviceId': fields.String(attribute='uuid'),
-              'entityId': fields.String(attribute='entity_id'),
-              'meteringPointId': fields.String(attribute='metering_point_id'),
-              'description': fields.String,
-              'privacy': fields.String
-    }
+    # If not NULL, represents the location of the device in some 3D coordinate space.
+    # NOTE: Not part of the AMON standard, but can be represented in the "metadata" structure.
+    x = db.Column(db.Float, nullable=True)
+    y = db.Column(db.Float, nullable=True)
+    z = db.Column(db.Float, nullable=True)
+
+    metadata_fields = {'x': fields.Float,
+                       'y': fields.Float,
+                       'z': fields.Float}
+
+    response_fields = {'deviceId': fields.String(attribute='uuid'),
+                       'entityId': fields.String(attribute='entity_id'),
+                       'meteringPointId': fields.String(attribute='metering_point_id'),
+                       'description': fields.String,
+                       'privacy': fields.String}
 
     def __init__(self, UUID, entity_id, metering_point_id, privacy, description=None):
         if uuid_pattern.match(UUID) is None:
