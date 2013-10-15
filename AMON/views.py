@@ -1,8 +1,8 @@
 from flask import request, url_for, make_response, jsonify
 from flask.ext.restful import Resource, marshal, abort
 from sqlalchemy.exc import ArgumentError, IntegrityError
-from antiCoT import db, api
-from antiCoT.schema.models import Entity, MeteringPoint
+from AMON import db, api
+from AMON.schema.models import Entity, MeteringPoint
 
 
 class Entities(Resource):

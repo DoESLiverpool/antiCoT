@@ -3,7 +3,7 @@ import re
 from flask.ext.restful import fields
 from sqlalchemy.exc import ArgumentError
 
-from antiCoT import db
+from AMON import db
 
 uuid_pattern = re.compile('[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}\Z', re.I)
 
