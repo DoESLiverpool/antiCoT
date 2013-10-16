@@ -1,6 +1,6 @@
 import uuid
 import re
-from flask.ext.restful import fields
+from flask.ext.restful import fields, marshal
 from sqlalchemy.exc import ArgumentError
 
 from AMON import db
@@ -57,7 +57,8 @@ class MeteringPoint(db.Model):
 
     response_fields = {'meteringPointId': fields.String(attribute='uuid'),
                        'entityId': fields.String(attribute='entity_id'),
-                       'description': fields.String}
+                       'description': fields.String,
+                       'metadata': fields.Nested(metadata_fields)}
 
     def __init__(self, UUID, entity_id, description=None):
         if uuid_pattern.match(UUID) is None:
@@ -91,6 +92,7 @@ class Reading(db.Model):
     corrected_unit = db.Column(db.Text(), nullable=True)
     correction_factor = db.Column(db.Float(), nullable=True)
     correction_factor_breakdown = db.Column(db.Text(), nullable=True)
+    device_id = db.Column(db.String(36), db.ForeignKey('devices.uuid'), index=True)
 
     response_fields = {'type': fields.String(attribute='reading_type'),
                        'unit': fields.String,
@@ -150,8 +152,10 @@ class Device(db.Model):
     measurements = db.relationship('Measurement', backref=db.backref('device'))
     readings = db.relationship('Reading', backref=db.backref('device'))
 
+
     # If not NULL, represents the location of the device in some 3D coordinate space.
-    # NOTE: Not part of the AMON standard, but can be represented in the "metadata" structure.
+    # NOTE: Not part of the AMON standard, but can be represented in the "metadata" structure. This is different from
+    # the "location" attribute because that represents a location in a well-known geographic coordinate system.
     x = db.Column(db.Float, nullable=True)
     y = db.Column(db.Float, nullable=True)
     z = db.Column(db.Float, nullable=True)
@@ -164,7 +168,8 @@ class Device(db.Model):
                        'entityId': fields.String(attribute='entity_id'),
                        'meteringPointId': fields.String(attribute='metering_point_id'),
                        'description': fields.String,
-                       'privacy': fields.String}
+                       'privacy': fields.String,
+                       'metadata': fields.Nested(metadata_fields)}
 
     def __init__(self, UUID, entity_id, metering_point_id, privacy, description=None):
         if uuid_pattern.match(UUID) is None:
@@ -187,4 +192,9 @@ class Device(db.Model):
         self.description = description
 
     def __repr__(self):
-        return self.uuid
+        return 'Device(UUID={0}, metering_point_id={1}, entity_id={2})'.format(self.uuid, self.metering_point_id,
+                                                                               self.entity_id)
+
+    def marshal(self):
+        # metadata = marshal(self, Device.metadata_fields)
+        return marshal(self, Device.response_fields)
