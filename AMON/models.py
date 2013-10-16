@@ -1,6 +1,6 @@
 import uuid
 import re
-from flask.ext.restful import fields, marshal
+from flask.ext.restful import fields
 from sqlalchemy.exc import ArgumentError
 
 from AMON import db
@@ -152,7 +152,6 @@ class Device(db.Model):
     measurements = db.relationship('Measurement', backref=db.backref('device'))
     readings = db.relationship('Reading', backref=db.backref('device'))
 
-
     # If not NULL, represents the location of the device in some 3D coordinate space.
     # NOTE: Not part of the AMON standard, but can be represented in the "metadata" structure. This is different from
     # the "location" attribute because that represents a location in a well-known geographic coordinate system.
@@ -194,7 +193,3 @@ class Device(db.Model):
     def __repr__(self):
         return 'Device(UUID={0}, metering_point_id={1}, entity_id={2})'.format(self.uuid, self.metering_point_id,
                                                                                self.entity_id)
-
-    def marshal(self):
-        # metadata = marshal(self, Device.metadata_fields)
-        return marshal(self, Device.response_fields)
