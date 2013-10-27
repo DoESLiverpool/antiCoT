@@ -1,3 +1,4 @@
+import json
 import uuid
 import re
 from flask.ext.restful import fields
@@ -43,6 +44,7 @@ class MeteringPoint(db.Model):
     uuid = db.Column(db.String(36), unique=True, primary_key=True)
     description = db.Column(db.Text, nullable=True)
     entity_id = db.Column(db.String(36), db.ForeignKey('entities.uuid'), index=True)
+    metadata = db.Column(db.Text, nullable=True)
     devices = db.relationship('Device', cascade='all', backref=db.backref('metering_point'))
 
     # If not NULL, represents the location of the device in some 3D coordinate space.
@@ -51,14 +53,10 @@ class MeteringPoint(db.Model):
     y = db.Column(db.Float, nullable=True)
     z = db.Column(db.Float, nullable=True)
 
-    metadata_fields = {'x': fields.Float,
-                       'y': fields.Float,
-                       'z': fields.Float}
-
     response_fields = {'meteringPointId': fields.String(attribute='uuid'),
                        'entityId': fields.String(attribute='entity_id'),
                        'description': fields.String,
-                       'metadata': fields.Nested(metadata_fields)}
+                       'metadata': fields.String}
 
     def __init__(self, UUID, entity_id, description=None):
         if uuid_pattern.match(UUID) is None:
@@ -75,6 +73,19 @@ class MeteringPoint(db.Model):
 
     def __repr__(self):
         return self.uuid
+
+    def set_metadata(self, metadata_string):
+        """
+        Parses JSON metadata, setting specific columns if available. Overwrites existing metadata if it exists.
+
+        :param metadata_string: A JSON string
+        :raises: ValueError -- If the JSON could not be parsed
+        """
+        metadata = json.loads(metadata_string)
+        self.x = metadata.get('x')
+        self.y = metadata.get('y')
+        self.z = metadata.get('z')
+        self.metadata = metadata_string
 
 
 class Reading(db.Model):
@@ -149,6 +160,7 @@ class Device(db.Model):
     metering_point_id = db.Column(db.String(36), db.ForeignKey('metering_points.uuid'), index=True)
     description = db.Column(db.Text, nullable=True)
     privacy = db.Column(db.Enum('private', 'public'), nullable=False)
+    metadata = db.Column(db.Text, nullable=True)
     measurements = db.relationship('Measurement', backref=db.backref('device'))
     readings = db.relationship('Reading', backref=db.backref('device'))
 
@@ -159,16 +171,12 @@ class Device(db.Model):
     y = db.Column(db.Float, nullable=True)
     z = db.Column(db.Float, nullable=True)
 
-    metadata_fields = {'x': fields.Float,
-                       'y': fields.Float,
-                       'z': fields.Float}
-
     response_fields = {'deviceId': fields.String(attribute='uuid'),
                        'entityId': fields.String(attribute='entity_id'),
                        'meteringPointId': fields.String(attribute='metering_point_id'),
                        'description': fields.String,
                        'privacy': fields.String,
-                       'metadata': fields.Nested(metadata_fields)}
+                       'metadata': fields.String}
 
     def __init__(self, UUID, entity_id, metering_point_id, privacy, description=None):
         if uuid_pattern.match(UUID) is None:
@@ -193,3 +201,16 @@ class Device(db.Model):
     def __repr__(self):
         return 'Device(UUID={0}, metering_point_id={1}, entity_id={2})'.format(self.uuid, self.metering_point_id,
                                                                                self.entity_id)
+
+    def set_metadata(self, metadata_string):
+        """
+        Parses JSON metadata, setting specific columns if available. Overwrites existing metadata if it exists.
+
+        :param metadata_string: A JSON string
+        :raises: ValueError -- If the JSON could not be parsed
+        """
+        metadata = json.loads(metadata_string)
+        self.x = metadata.get('x')
+        self.y = metadata.get('y')
+        self.z = metadata.get('z')
+        self.metadata = metadata_string

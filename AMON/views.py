@@ -167,10 +167,16 @@ class MeteringPoints(Resource):
             else:
                 metering_point.description = request.json.get('description')
 
+                try:
+                    metering_point.set_metadata(request.json.get('metadata'))
+                except ValueError:
+                    pass
+
+                # As an alternative to changing an Entity's list of MeteringPoints, we instead change the Entity for a
+                # given MeteringPoint.
                 entity_id = request.json.get('entityId')
 
                 if entity_id is not None and entity_id != metering_point.entity_id:
-                    # We may need to do something clever here with re-parenting this record.
                     metering_point.entity_id = entity_id
 
                 db.session.commit()
