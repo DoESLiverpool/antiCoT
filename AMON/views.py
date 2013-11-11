@@ -1,3 +1,4 @@
+import logging
 from flask import request, url_for, make_response, jsonify
 from flask.ext.restful import Resource, marshal, abort
 from sqlalchemy.exc import ArgumentError, IntegrityError

@@ -44,7 +44,7 @@ class MeteringPoint(db.Model):
     uuid = db.Column(db.String(36), unique=True, primary_key=True)
     description = db.Column(db.Text, nullable=True)
     entity_id = db.Column(db.String(36), db.ForeignKey('entities.uuid'), index=True)
-    metadata = db.Column(db.Text, nullable=True)
+    the_metadata = db.Column(db.Text, nullable=True)
     devices = db.relationship('Device', cascade='all', backref=db.backref('metering_point'))
 
     # If not NULL, represents the location of the device in some 3D coordinate space.
@@ -85,7 +85,7 @@ class MeteringPoint(db.Model):
         self.x = metadata.get('x')
         self.y = metadata.get('y')
         self.z = metadata.get('z')
-        self.metadata = metadata_string
+        self.the_metadata = metadata_string
 
 
 class Reading(db.Model):
@@ -160,7 +160,7 @@ class Device(db.Model):
     metering_point_id = db.Column(db.String(36), db.ForeignKey('metering_points.uuid'), index=True)
     description = db.Column(db.Text, nullable=True)
     privacy = db.Column(db.Enum('private', 'public'), nullable=False)
-    metadata = db.Column(db.Text, nullable=True)
+    the_metadata = db.Column(db.Text, nullable=True)
     measurements = db.relationship('Measurement', backref=db.backref('device'))
     readings = db.relationship('Reading', backref=db.backref('device'))
 
@@ -213,4 +213,4 @@ class Device(db.Model):
         self.x = metadata.get('x')
         self.y = metadata.get('y')
         self.z = metadata.get('z')
-        self.metadata = metadata_string
+        self.the_metadata = metadata_string
